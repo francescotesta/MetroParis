@@ -9,6 +9,7 @@ import java.util.List;
 
 import com.javadocmd.simplelatlng.LatLng;
 
+import it.polito.tdp.metroparis.model.Connessione;
 import it.polito.tdp.metroparis.model.Fermata;
 import it.polito.tdp.metroparis.model.Linea;
 
@@ -66,6 +67,74 @@ public class MetroDAO {
 		}
 
 		return linee;
+	}
+
+	public boolean fermateCollegate(Fermata f1, Fermata f2) {
+		
+		String sql = "Select COUNT(*) AS cnt "
+				+ "From connessione "
+				+ "where (id_stazP = ? and id_stazA = ?) OR "
+				+ "(id_stazP=? and id_stazA=?)";
+		
+		try{
+		Connection conn = DBConnect.getConnection();
+		PreparedStatement st = conn.prepareStatement(sql);
+		
+		st.setInt(1, f1.getIdFermata());
+		st.setInt(2, f2.getIdFermata());
+		st.setInt(3, f2.getIdFermata());
+		st.setInt(4, f1.getIdFermata());
+		
+		ResultSet rs = st.executeQuery();
+		
+		rs.first();
+		
+		int conteggio = rs.getInt("cnt");
+		
+		conn.close();
+		
+		return (conteggio>0);
+		
+		}catch(SQLException e) {
+			throw new RuntimeException();
+		}
+	}
+	
+	public List<Connessione> getAllConnessioni(List<Fermata> fermate){
+		String sql = "SELECT id_connessione, id_linea, id_stazP, id_stazA "
+				+ "FROM connessione "
+				+ "WHERE id_StazP>id_stazA";
+		List<Connessione> result = new ArrayList<>();
+		try {
+			Connection conn = DBConnect.getConnection();
+			PreparedStatement st = conn.prepareStatement(sql);
+			
+			ResultSet rs = st.executeQuery();
+			
+			while(rs.next()) {
+				int id_partenza = rs.getInt("id_stazP");
+				Fermata fermata_partenza = null;
+				for(Fermata f:fermate) {
+					if(f.getIdFermata()==id_partenza)
+						fermata_partenza=f;
+				}
+				
+				int id_arrivo = rs.getInt("id_stazA");
+				Fermata fermata_arrivo = null;
+				for(Fermata f:fermate) {
+					if(f.getIdFermata()==id_arrivo)
+						fermata_arrivo=f;
+				}
+				
+				Connessione c = new Connessione(rs.getInt("id_connessione"), null, fermata_partenza, fermata_arrivo);
+				
+				result.add(c);
+			}
+			conn.close();
+			return result;
+		}catch(SQLException e) {
+			throw new RuntimeException();
+		}
 	}
 
 
